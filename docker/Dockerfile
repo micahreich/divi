@@ -32,6 +32,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN rosdep init && rosdep update
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-noetic-rosbridge-server \
+    ros-noetic-joy \ 
+    && rm -rf /var/lib/apt/lists/*
+
 # ─── User Setup ───────────────────────────────────────────────────────────────
 ARG USERNAME=rosdev
 ARG USER_UID=1000
@@ -87,6 +92,10 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 USER ${USERNAME}
+
+RUN echo "source /opt/ros/noetic/setup.bash" >> /home/${USERNAME}/.bashrc && \
+    echo "[ -f \${ROS_WS}/devel/setup.bash ] && source \${ROS_WS}/devel/setup.bash" >> /home/${USERNAME}/.bashrc
+
 WORKDIR ${ROS_WS}
 
 ENTRYPOINT ["/entrypoint.sh"]
