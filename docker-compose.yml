@@ -1,0 +1,44 @@
+services:
+  ros-noetic:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        USERNAME: ${USERNAME:-rosdev}
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+    image: ${COMPOSE_PROJECT_NAME:-divi}-ros-noetic:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-divi}-ros-noetic
+
+    network_mode: host
+    privileged: true
+
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - ROS_DISTRO=noetic
+      - ROS_WS=/home/${USERNAME:-rosdev}/ros_ws
+      - TERM=xterm-256color
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+
+    volumes:
+      # Source code: bind-mounted for live host editing
+      - ./ros_ws/src:/home/${USERNAME:-rosdev}/ros_ws/src
+
+      # Build artifacts: named volumes so catkin builds survive restarts
+      - ros_build:/home/${USERNAME:-rosdev}/ros_ws/build
+      - ros_devel:/home/${USERNAME:-rosdev}/ros_ws/devel
+      - ros_log:/home/${USERNAME:-rosdev}/ros_ws/log
+
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /dev:/dev
+      - /dev/shm:/dev/shm
+
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+volumes:
+  ros_build:
+  ros_devel:
+  ros_log:
