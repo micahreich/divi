@@ -1,1 +1,1 @@
-# divi
+# Divi: mobile speaker platform
