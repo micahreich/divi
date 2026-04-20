@@ -71,7 +71,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     htop \
     v4l-utils \
     usbutils \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install pyserial
 
 # ─── Workspace Layout ─────────────────────────────────────────────────────────
 ENV ROS_WS=/home/${USERNAME}/ros_ws
