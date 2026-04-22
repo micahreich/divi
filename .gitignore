@@ -4,6 +4,9 @@ ros_ws/devel/
 ros_ws/logs/
 ros_ws/.catkin_workspace
 
+# Client-side venv
+client/.venv
+
 # Editor/IDE
 .vscode/
 *.swp
