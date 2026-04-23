@@ -201,6 +201,7 @@ class Node:
             self.roboclaw.ResetEncoders(self.address)
 
         self.MAX_SPEED          = rospy.get_param("~max_speed", 2.0)
+        self.MIN_BATTERY_VOLTAGE = rospy.get_param("~min_battery_voltage", 0.0)
         ticks_per_rev           = rospy.get_param("~ticks_per_rev", 537.7)
         wheel_diameter_m        = rospy.get_param("~wheel_diameter_m", 0.1036)
         self.TICKS_PER_METER    = ticks_per_rev / (pi * wheel_diameter_m)
@@ -279,7 +280,7 @@ class Node:
         vr_ticks = int(vr * self.TICKS_PER_METER)  # ticks/s
         vl_ticks = int(vl * self.TICKS_PER_METER)
 
-        rospy.loginfo("vr_ticks:%8d vl_ticks: %8d", vr_ticks, vl_ticks)
+        rospy.logdebug("vr_ticks:%8d vl_ticks: %8d", vr_ticks, vl_ticks)
 
         try:
             # This is a hack way to keep a poorly tuned PID from making noise at speed 0
@@ -318,10 +319,14 @@ class Node:
         
         try:
             with self.mutex:
-                stat.add("Main Batt V:", float(self.roboclaw.ReadMainBatteryVoltage(self.address)[1] / 10))
+                main_batt_v = float(self.roboclaw.ReadMainBatteryVoltage(self.address)[1] / 10)
+                stat.add("Main Batt V:", main_batt_v)
                 stat.add("Logic Batt V:", float(self.roboclaw.ReadLogicBatteryVoltage(self.address)[1] / 10))
                 stat.add("Temp1 C:", float(self.roboclaw.ReadTemp(self.address)[1] / 10))
                 stat.add("Temp2 C:", float(self.roboclaw.ReadTemp2(self.address)[1] / 10))
+            if self.MIN_BATTERY_VOLTAGE > 0.0 and main_batt_v <= self.MIN_BATTERY_VOLTAGE:
+                rospy.logerr("Battery voltage %.1fV at or below minimum threshold %.1fV",
+                             main_batt_v, self.MIN_BATTERY_VOLTAGE)
         except OSError as e:
             rospy.logwarn("Diagnostics OSError: %d", e.errno)
             rospy.logdebug(e)

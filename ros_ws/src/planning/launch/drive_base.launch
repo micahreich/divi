@@ -1,0 +1,33 @@
+<launch>
+    <!-- Shared velocity limits — single source of truth for both teleop and profiler -->
+    <arg name="max_linear_vel"  default="0.5" />
+    <arg name="max_angular_vel" default="0.8" />
+
+    <!-- Roboclaw -->
+    <include file="$(find roboclaw_node)/launch/roboclaw.launch" />
+
+    <!-- Rosbridge -->
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+
+    <!-- Joystick teleop: publishes raw target velocities -->
+    <node pkg="planning" type="joystick_teleop.py" name="joystick_teleop" output="screen">
+        <param name="max_linear_vel"  value="$(arg max_linear_vel)" />
+        <param name="max_angular_vel" value="$(arg max_angular_vel)" />
+        <param name="linear_axis"     value="1" />  <!-- left stick Y -->
+        <param name="angular_axis"    value="2" />  <!-- right stick X -->
+        <remap from="cmd_vel" to="cmd_vel_raw" />
+    </node>
+
+    <!-- Motion profiler: jerk-limited S-curve smoother between teleop and driver -->
+    <node pkg="planning" type="motion_profiler.py" name="motion_profiler" output="screen">
+        <param name="max_linear_vel"    value="$(arg max_linear_vel)" />
+        <param name="max_angular_vel"   value="$(arg max_angular_vel)" />
+        <param name="max_linear_accel"  value="0.7" />  <!-- m/s^2   — lower = gentler -->
+        <param name="max_angular_accel" value="1.0" />  <!-- rad/s^2 -->
+        <param name="max_linear_jerk"   value="1.2" />  <!-- m/s^3   — lower = smoother ramp -->
+        <param name="max_angular_jerk"  value="4.0" />  <!-- rad/s^3 -->
+        <param name="linear_deadband"   value="0.05" /> <!-- fraction of full stick [0, 1) -->
+        <param name="angular_deadband"  value="0.05" />
+        <param name="rate"              value="50"  />  <!-- Hz -->
+    </node>
+</launch>
