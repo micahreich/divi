@@ -1,6 +1,7 @@
 import pygame
 import roslibpy
 import time
+import threading
 
 JETSON_IP_1 = "mreich-nano1"
 JETSON_IP_2 = "mreich-nano2"
@@ -10,8 +11,8 @@ PUBLISH_RATE_HZ = 20
 JOY_TOPIC = "/joy"
 
 # Button indices (0-indexed); adjust for your controller
-BUTTON_A = 0   # toggles IP1-only mode
-BUTTON_B = 1   # toggles IP2-only mode
+BUTTON_A = 1   # toggles IP1-only mode
+BUTTON_B = 2   # toggles IP2-only mode
 
 MODE_DUAL = "dual"
 MODE_IP1  = "ip1_only"
@@ -24,15 +25,25 @@ MODE_LABELS = {
 }
 
 
-def try_connect(host, port, timeout=3):
-    client = roslibpy.Ros(host=host, port=port)
-    try:
-        client.run(timeout=timeout)
-        print(f"Connected to ROS at {host}:{port}")
-        return client
-    except Exception as e:
-        print(f"Warning: could not connect to {host}:{port} — {e}")
-        return None
+def connect_clients(hosts, port, timeout=5):
+    results = [None] * len(hosts)
+
+    def worker(i, host):
+        client = roslibpy.Ros(host=host, port=port)
+        try:
+            client.run(timeout=timeout)
+            print(f"Connected to ROS at {host}:{port}")
+            results[i] = client
+        except Exception as e:
+            print(f"Warning: could not connect to {host}:{port} — {e}")
+
+    threads = [threading.Thread(target=worker, args=(i, h), daemon=True)
+               for i, h in enumerate(hosts)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout + 2)
+    return results
 
 
 def make_joy_msg(joystick):
@@ -74,8 +85,7 @@ def main():
     joystick.init()
     print(f"Joystick: {joystick.get_name()}")
 
-    client1 = try_connect(JETSON_IP_1, JETSON_PORT)
-    client2 = try_connect(JETSON_IP_2, JETSON_PORT)
+    client1, client2 = connect_clients([JETSON_IP_1, JETSON_IP_2], JETSON_PORT)
 
     if client1 is None and client2 is None:
         print("Could not connect to any ROS host, exiting.")
